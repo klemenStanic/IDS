@@ -20,7 +20,7 @@ An IDS system using snort, sflow, netflow, elasticsearch and spark
 ## Implementation:
 My implementation of this system consists of using 4 virtual machines, which, for the sake of simplicity, have the following names and functions:
 - curious2 (this is a virtual machine placed on the outside segment of the network and is used for capturing/forwarding of sflow packets, capturing/forwarding netflow packets and Snort detection)
-Has the following software installed:
+<br>Has the following software installed:
 PulledPork, Snort, Barnyard, HSFlowD, FProbe
 - snortx (same as curious2, but on the insidesegment)
 Has the following software installed:
