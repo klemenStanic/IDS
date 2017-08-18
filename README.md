@@ -3,8 +3,8 @@ An IDS system using snort, sflow, netflow, elasticsearch and spark
 
 # Technologies/software used in this system:
 ## Packet capturing and forwarding
--PulledPork
--Snort IDS
+-PulledPork//
+-Snort IDS//
 -barnyard
 -hsflowd(sflow host)
 -fprobe(netflow host)
