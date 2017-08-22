@@ -62,7 +62,33 @@ TODO spark
 
 ## Virtual machines "curious2" and "snortx":
 ```
+#starting snort in daemon mode
 sudo /usr/local/bin/snort -q -u snort -g snort -c /etc/snort/snort.conf -i eth0 -D
+
+#starting barnyard in continuous and daemon mode
+sudo barnyard2 -c /etc/snort/barnyard2.conf -d /var/log/snort/ -f snort.u2 -g snort -w /var/log/snort/barnyard2.waldo -D
+
+#starting netflow host and sending data to "eshog" VM
+sudo fprobe 193.138.1.30:9995
+```
+## Virtual machine "collector":
+```
+#using sflowtool to forward any sflow packets to "eshog" VM
+sudo sflowtool -f 192.138.1.30/6343 &
 ```
 
+## Virtual machine "eshog":
+```
+#starting elasticsearch
+sudo service elasticsearch start
+
+#starting logstash
+sudo service logstash start
+
+#starting kibana 
+sudo service kibana start
+
+#starting spark-shell with elasticsearch plugin
+sudo /usr/local/share/spark/spark-2.0.2/bin/spark-shell --driver-class-path=/home/klemen/elasticsearch-hadoop-5.5.1/dist/elasticsearch-spark-20_2.11-5.5.1.jar
+```
 
