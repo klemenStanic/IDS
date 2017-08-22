@@ -57,3 +57,12 @@ Since Kibana provides a web UI only on a computer we are running it on and we ca
 TODO spark
 
 
+
+# Commands for starting the individual services on each of the virtual machines:
+
+## Virtual machines "curious2" and "snortx":
+```
+sudo /usr/local/bin/snort -q -u snort -g snort -c /etc/snort/snort.conf -i eth0 -D
+```
+
+
