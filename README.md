@@ -69,12 +69,12 @@ sudo /usr/local/bin/snort -q -u snort -g snort -c /etc/snort/snort.conf -i eth0 
 sudo barnyard2 -c /etc/snort/barnyard2.conf -d /var/log/snort/ -f snort.u2 -g snort -w /var/log/snort/barnyard2.waldo -D
 
 #starting netflow host and sending data to "eshog" VM
-sudo fprobe 193.138.1.30:9995
+sudo fprobe ###.###.###.###:9995
 ```
 ## Virtual machine "collector":
 ```
 #using sflowtool to forward any sflow packets to "eshog" VM
-sudo sflowtool -f 192.138.1.30/6343 &
+sudo sflowtool -f ###.###.###.###/6343 &
 ```
 
 ## Virtual machine "eshog":
