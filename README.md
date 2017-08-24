@@ -51,11 +51,88 @@ Is used just to forward the sflow packets from router/switch and "curious2" VM u
 
 
 ## Virtual machine "eshog":
-Is a central piece of the system. It recieves data from multiple sources and stores it in "elasticsearch". <br>
+I installed Elasticsearch, Logstash and Kibana using the install guide https://www.elastic.co/start .
+
+This VM is a central piece of the system. It recieves data from multiple sources and stores it in "elasticsearch". <br>
 <b>Elasticsearch</b> is an open-source, broadly-distributable, readily-scalable, enterprise-grade search engine. Accessible through an extensive and elaborate API, Elasticsearch can power extremely fast searches that support your data discovery applications. <br>
 <b>Logstash</b> is an open source, server-side data processing pipeline that ingests data from a multitude of sources simultaneously, transforms it, and then sends it to a preffered datastash, in our case, Elasticsearch. <br>
+To configure Logstash to write/insert data from our sources to Elasticsearch, I used the following configuration (logstash.conf):
+```
+input {
+  udp {
+   port => 5544
+   type => "syslog"
+  }
+
+  pipe {
+   type => "sflow"
+   command => "sflowtool -l -p 6343"
+  }
+
+  udp {
+   port => 9995
+   codec => netflow {}
+   type => netflow
+  }
+}
+
+filter {
+    if [type] == "syslog" {
+        grok {
+            match => [
+                "message" , '\<%{NUMBER:priority_number}\>%{SPACE}(?<date>(.+?(?=T)))T%{TIME:time}Z%{SPACE}%{USERNAME:sensor_name}%{SPACE}\[(?<unknown>(.+?(?=\])))\]%{SPACE}(?<event>(.+?(?=\[)))\[((.+?(?=\:))):(?<classification>(.+?(?=\])))\] \[((.+?(?=\:)))\:%{SPACE}%{NUMBER:Priority}\]\:%{SPACE}\{%{WORD:protocol}\}%{SPACE}%{IPV4:source_ip}\:%{NUMBER:source_port}%{SPACE}->%{SPACE}%{IPV4:dest_ip}\:%{NUMBER:dest_port}'
+            ]
+	    add_tag => ["grok_successful"]
+        }
+    }
+
+    if [type] == "sflow" {
+	if ([message] =~ "FLOW"){
+			
+	        grok {
+            		match => { "message" => "%{WORD:SampleType},%{IP:sflow.ReporterIP},%{WORD:sflow.inputPort},%{WORD:sflow.outputPort},%{WORD:sflow.srcMAC},%{WORD:sflow.dstMAC},%{WORD:sflow.EtherType},%{NUMBER:sflow.in_vlan},%{NUMBER:sflow.out_vlan},%{USERNAME:sflow.srcIP},%{USERNAME:sflow.dstIP},%{NUMBER:sflow.IPProtocol},%{WORD:sflow.IPTOS},%{WORD:sflow.IPTTL},%{NUMBER:sflow.srcPort},%{NUMBER:sflow.dstPort},%{DATA:sflow.tcpFlags},%{NUMBER:sflow.PacketSize},%{NUMBER:sflow.IPSize},%{NUMBER:sflow.SampleRate}" }
+	        add_tag => ["FLOW_PACKET"]
+		}
+	}
+    
+	if ([message] =~ "CNTR"){
+		grok {
+			match => { "message" => "%{WORD:SampleType},%{IP:sflow.ReporterIP},%{NUMBER:sflow.ifIndex},%{NUMBER:sflow.ifType},%{NUMBER:sflow.ifSpeed},%{NUMBER:sflow.ifDirection},%{NUMBER:sflow.ifStatus},%{NUMBER:sflow.ifInOctets},%{NUMBER:sflow.ifInUcastPkts},%{NUMBER:sflow.ifInMulticastPkts},%{NUMBER:sflow.ifInBroadcastPkts},%{NUMBER:sflow.ifInDiscards},%{NUMBER:sflow.ifInErrors},%{NUMBER:sflow.ifInUnknownProtos},%{NUMBER:sflow.ifOutOctets},%{NUMBER:sflow.ifOutUcastPkts},%{NUMBER:sflow.ifOutMulticastPkts},%{NUMBER:sflow.ifOutBroadcastPkts},%{NUMBER:sflow.ifOutDiscards},%{NUMBER:sflow.ifOutErrors},%{NUMBER:sflow.ifPromiscousMode}" }
+			add_tag => ["CNTR_PACKET"]
+		} 
+   	}
+    }
+}
+
+
+output {
+ if [type] == "syslog" { 
+  elasticsearch {
+    hosts => ["localhost:9200"]
+    index => "syslog-%{+YYYY.MM.dd}"
+  }
+ }
+ if [type] == "sflow" {
+   elasticsearch {
+    hosts => ["localhost:9200"]
+    index => "sflow-%{+YYYY.MM.dd}"
+   }
+ }
+  if [type] == "netflow" {
+   elasticsearch {
+    hosts => ["localhost:9200"]
+    index => "netflow-%{+YYYY.MM.dd}"
+   }
+ }
+}
+
+```
+It consists of three parts; input, filter and output. In the input section, I specified three inputs, one for syslogs coming from two VM with "snort" installed, one for sflows and one for netflows. The data comes throught the input ports in a line-by-line format. To get useful information from these lines I wrote specific filters for every type of input. I used a logstash's "grok" filters, which help you dissect the line into multiple fields, that are then saved into Elasticsearch. 
+I used https://grokdebug.herokuapp.com/ for writing "grok" filters, to make it a bit easier and faster.<br>
+To save data to the correct Elasticsearch index, I specified 3 outputs, one fro syslogs, one for sflows and another one for netflows.
+
 <b>Kibana</b> is a tool used for vizualizing the data stored in Elasticsearch and it provides numerous other functions like time series, analyzing relationships, exploring anomalies with Machine Learing(needs a plugin X-Pack) etc.. <br>
-Since Kibana provides a web UI only on a computer we are running it on and we cant get UI over SSH, I used nginx as a reverse proxy to be able to connect to Kibana UI on other machines.
+Since Kibana provides a web UI only on a computer we are running it on and we cant get UI over SSH, I used <b>nginx</b> as a reverse proxy to be able to connect to Kibana UI on other machines.
 TODO spark
 
 
