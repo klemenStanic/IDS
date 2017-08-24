@@ -142,6 +142,8 @@ TODO spark
 
 ## Virtual machines "curious2" and "snortx":
 ```
+#starting hsflowd for sflow collection and forwording (only on "curious2", which is on the outside segment, sflows from inside segment are being sent from "collector")
+sudo service hsflowd start
 #starting snort in daemon mode
 sudo /usr/local/bin/snort -q -u snort -g snort -c /etc/snort/snort.conf -i eth0 -D
 
