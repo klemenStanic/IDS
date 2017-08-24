@@ -18,7 +18,7 @@ An IDS system using snort, sflow, netflow, elasticsearch and spark
 
 
 ## Implementation:
-My implementation of this system consists of using 4 virtual machines, all running Ubuntu 16.04, which, for the sake of simplicity, have the following names and functions:
+My implementation of this system consists of using 4 virtual machines, all running Ubuntu 16.04, which, for the sake of simplicity, have the following names:
 - <b>curious2</b> (this is a virtual machine placed on the outside segment of the network and is used for capturing/forwarding of sflow packets, capturing/forwarding netflow packets and Snort detection)<br>
 Has the following software installed:<br>
 PulledPork, Snort, Barnyard, HSFlowD, FProbe
@@ -34,7 +34,7 @@ ElasticSearch, Logstash, Kibana, Nginx, Spark w/ ElasticSearch
 
 ![alt text](https://github.com/klemenStanic/IDS/blob/master/img/myIDSOverview.jpg)
 
-In the following sections, I will describe what I did on a specific Virtual Machine.
+In the following sections, I will describe how I configured every VM.
 
 
 ## Virtual machines "curious2" and "snortx":
@@ -47,11 +47,11 @@ TODO SFLOW, NETFLOW
 
 
 ## Virtual machine "collector":
-Is used just to forward the sflow packets from router/switch and "curious2" VM using sflowtool. It also contains the full <b>Hogzilla IDS</b>, which is currently not functional.
+Is used just to forward the sflow packets from router/switch and "curious2" VM to "eshog", using sflowtool. It also contains the full <b>Hogzilla IDS</b>, which is currently not functional.
 
 
 ## Virtual machine "eshog":
-I installed Elasticsearch, Logstash and Kibana using the install guide https://www.elastic.co/start .
+I installed Elasticsearch, Logstash and Kibana using the install guide https://www.elastic.co/start.
 
 This VM is a central piece of the system. It recieves data from multiple sources and stores it in "elasticsearch". <br>
 <b>Elasticsearch</b> is an open-source, broadly-distributable, readily-scalable, enterprise-grade search engine. Accessible through an extensive and elaborate API, Elasticsearch can power extremely fast searches that support your data discovery applications. <br>
@@ -127,9 +127,10 @@ output {
 }
 
 ```
-It consists of three parts; input, filter and output. In the input section, I specified three inputs, one for syslogs coming from two VM with "snort" installed, one for sflows and one for netflows. The data comes throught the input ports in a line-by-line format. To get useful information from these lines I wrote specific filters for every type of input. I used a logstash's "grok" filters, which help you dissect the line into multiple fields, that are then saved into Elasticsearch. 
+It consists of three parts; input, filter and output. In the input section, I specified three inputs, one for syslogs coming from two VM with "snort" installed, one for sflows and one for netflows. Logstash has no built-in sflow input fields, so I used "sflowtool" to listen for incoming packets and pipe the outputs(line-by-line data) to Logstash.<br>
+The data comes throught the input ports in a line-by-line format. To get useful information from these lines I wrote specific filters for every type of input. I used a logstash's "grok" filters(regular expressions), which help you dissect the line into multiple fields, that are then saved into Elasticsearch. 
 I used https://grokdebug.herokuapp.com/ for writing "grok" filters, to make it a bit easier and faster.<br>
-To save data to the correct Elasticsearch index, I specified 3 outputs, one fro syslogs, one for sflows and another one for netflows.
+To save data to the correct Elasticsearch index, I specified 3 outputs, one for syslogs, one for sflows and another one for netflows.
 
 <b>Kibana</b> is a tool used for vizualizing the data stored in Elasticsearch and it provides numerous other functions like time series, analyzing relationships, exploring anomalies with Machine Learing(needs a plugin X-Pack) etc.. <br>
 Since Kibana provides a web UI only on a computer we are running it on and we cant get UI over SSH, I used <b>nginx</b> as a reverse proxy to be able to connect to Kibana UI on other machines.
