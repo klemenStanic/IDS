@@ -3,18 +3,18 @@ An IDS system using snort, sflow, netflow, elasticsearch and spark
 
 ## Technologies/software used in this system:
 ### Packet capturing and forwarding
-- PulledPork 
-- Snort IDS 
-- barnyard
-- hsflowd(sflow host)
-- fprobe(netflow host)
-- sflowtool(sflow collector)
+- PulledPork (https://github.com/shirkdog/pulledpork)
+- Snort IDS (https://www.snort.org/)
+- barnyard (https://github.com/firnsy/barnyard2)
+- hsflowd(sflow host) (https://github.com/sflow/host-sflow)
+- fprobe(netflow host) (http://manpages.ubuntu.com/manpages/xenial/man8/fprobe.8.html)
+- sflowtool(sflow collector) (https://github.com/sflow/sflowtool)
 
 ### Data storing, manipulation and visualization:
-- Elasticsearch
-- Kibana
-- Logstash
-- Spark with support for Elasticsearch/Hadoop
+- Elasticsearch (https://www.elastic.co/products/elasticsearch)
+- Kibana (https://www.elastic.co/products/kibana)
+- Logstash (https://www.elastic.co/products/logstash)
+- Spark with support for Elasticsearch/Hadoop (https://spark.apache.org/)
 
 
 ## Implementation:
