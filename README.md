@@ -1,5 +1,10 @@
 # IDS Report
-An IDS system using snort, sflow, netflow, elasticsearch and spark
+The basic idea is to create an IDS(Intrusion Detection System), that would capture data from the network and save this data to data stash, in our case Elasticsearch. Then, some computations/algorithms would be run on this data to detect unusual occurrences, possible attacks and just plain statistics of the traffic. <br>
+Firstly, I tried to install and configure <b>Hogzilla</b>(http://ids-hogzilla.org/), which is an open-source project that provides network anomaly detection and gives some visibility of the network. It comes in two variations, first one is using "Snort" module, the second one is using "sflow" packets for detection. I tried configuring both, but met with little success, because of many problems with installing all the software + very little visibility to what the system is actually doing. <br>
+
+The idea behind configuring Hogzilla was to learn how it is working, so we could use the knowledge to build a similar system. <br>
+Basically, "Hogzilla with sflow support" captures sFlows, saves them to HBase, runs some algoritms with Apache Spark and saves events back to HBase. Then, it uses a script to read the generated events and saves them to a local mysql server. The data on mySQL server is used to visualize the events using GrayLog. <br>
+This is very similar to what we are trying to accomplish, but with some modifications: instead of using Hbase we use ElasticSearch, Kibana is used as a substitute for GrayLog, so we dont need an mySQL server and can visualize directly from ElasticSearch. Also, we capture network data from multiple sources, so we can compare the traffic on multiple points of interest, and the data we capture isn't just sflow packets, but also netflows and events generated with SnortIDS. This way, we have more data to work with.
 
 ## Technologies/software used in this system:
 ### Packet capturing and forwarding
@@ -22,7 +27,7 @@ My implementation of this system consists of using 4 virtual machines, all runni
 - <b>curious2</b> (this is a virtual machine placed on the outside segment of the network and is used for capturing/forwarding of sflow packets, capturing/forwarding netflow packets and Snort detection)<br>
 Has the following software installed:<br>
 PulledPork, Snort, Barnyard, HSFlowD, FProbe
-- <b>snortx</b> (same as curious2, but on the insidesegment)<br>
+- <b>snortx</b> (same as curious2, but on the inside segment)<br>
 Has the following software installed:<br>
 PulledPork, Snort, Barnyard, HSFlowD, FProbe
 - <b>collector</b> (used for forwarding of sflows to eshog)<br>
@@ -34,6 +39,8 @@ ElasticSearch, Logstash, Kibana, Nginx, Spark w/ ElasticSearch
 
 ![alt text](https://github.com/klemenStanic/IDS/blob/master/img/myIDSOverview.jpg)
 
+The VM "curious2" is placed on the outside segment, while all the other VMs are behind a firewall. This way, we can capture network traffic both inside and outside and compare the traffic.
+
 In the following sections, I will describe how I configured every VM.
 
 
@@ -43,8 +50,18 @@ The installation is pretty straight forward and didn't cause many problems. <br>
 <b>Snort</b> is an open source IDS(Intrusion Detection System) that is performing real-time traffic analysis and packet logging. Snort uses rules to detect possible attacks and saves the logs of these possible attacks to unified2 (binary) files.<br>
 Rules are obtained with a program called <b>PulledPork</b> that automatically downloads the rules and saves them. These rules are then read by Snort IDS and used for analysis and detection. I needed to create a Snort account in order to get a so called "Oinkcode", which takes care of authentication. I also added a crontab entry in Linux, so that these rules are automatically updated every day and we get the latest rules. <br>
 <b>Barnyard2</b> is an open source interpreter for Snort unified2 binary output files. Its primary use is allowing Snort to write to disk in an efficient manner and leaving the task of parsing binary data into various formats to a separate process that will not cause Snort to miss network traffic. In my case, I configured Barnyard to output the data to a syslog collector, listening on the virtual machine "eshog", instead of just saving events to a local mysql database. 
-TODO SFLOW, NETFLOW
+<b>Fprobe</b> is a netflow probe, that collects data traffic and emit it as Netflow flows towards the specified collector.<br>
+(only on "curious2")<b>Hsflowd</b> stands for Host sflow daemon, which is an open source project that is used for capturing the sflow packets and forwarding them to collectors. It needed to be configured, like shown here: http://sflow.net/host-sflow-linux-config.php. My /etc/hsflowd.conf where ### represents collector/"eshog" VM's IP address:
+```
+sflow {
+    collector {
+        ip=###
+        udpport=6343
+    }
+    pcap { dev = eth0 }
+}
 
+```
 
 ## Virtual machine "collector":
 Is used just to forward the sflow packets from router/switch and "curious2" VM to "eshog", using sflowtool. It also contains the full <b>Hogzilla IDS</b>, which is currently not functional.
