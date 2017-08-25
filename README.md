@@ -64,7 +64,9 @@ sflow {
 ```
 
 ## Virtual machine "collector":
-Is used just to forward the sflow packets from router/switch and "curious2" VM to "eshog", using sflowtool. It also contains the full <b>Hogzilla IDS</b>, which is currently not functional.
+Is used just to forward the sflow packets from router/switch and "curious2" VM to "eshog", using sflowtool.
+<b>sflowtool</b> is a sflow collector, that can either print in ASCII or forward the sflows to another collector. <br>
+This VM also contains the full <b>Hogzilla IDS</b>, which is currently not functional.
 
 
 ## Virtual machine "eshog":
