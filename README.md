@@ -205,7 +205,7 @@ We run our java program with the following command, where the last argument(5) i
 ```
 sudo ./bin/spark-submit --driver-class-path=/home/klemen/elasticsearch-hadoop-5.5.1/dist/elasticsearch-spark-20_2.11-5.5.1.jar --class IDSJava /home/klemen/IDSJava.jar 5
 ```
-##ICMPtester.java:
+## IDSJava.java
 ```
 int THRESHOLD = Integer.parseInt(args[0]);
 SparkConf conf = new SparkConf().setAppName("myApp").setMaster("local");
