@@ -257,7 +257,7 @@ private static void ICMPTesting(int THRESHOLD, JavaSparkContext jsc) {
         return onlyICMPevents;
     }
 ```
-In method getOnlyICMPEvents(), we create JavaRDD, which stands for Java Resilient Distributed Datasets. It connects to elasticsearch's index syslog-currentDate/syslog and filters out all the events, that dont have " Generic ICMP event" in them. Then, we call the method getOnlyICMPEvents() that returns just the ICMP events, that occured after the last time we ran this program(it reads it from a file). After that, it checks if the number of ICMP events is greater that the threshold value we entered, and if it is, runs the writeEventToEs() method. It also saves the current time in miliseconds to a file, that we can use the next time we run this program.
+In method getOnlyICMPEvents(), we create JavaRDD, which stands for Java Resilient Distributed Datasets. It connects to elasticsearch's index syslog-currentDate/syslog and filters out all the events, that dont have " Generic ICMP event" in them. Then, we call the method getOnlyICMPEvents() that returns just the ICMP events, that occured after the last time we ran this program(this timestamp is read from a file). After that, it checks if the number of ICMP events is greater that the threshold value we entered, and if it is, runs the writeEventToEs() method. It also saves the current time in miliseconds to a file, that we can use the next time we run this program.
 
 ```
     private static void writeEventToES(List<Map<String, Object>> ICMPevents, JavaSparkContext jsc, int THRESHOLD) {
