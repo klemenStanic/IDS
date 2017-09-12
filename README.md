@@ -314,6 +314,131 @@ GET snortevents/_search
 ```
 It checks the index "snortevents" and only returns events, that have "Generic ICMP event" in field classification and were inserted into elasticsearch in the last n seconds, where n is dynamically inserted in Java, based on how frequently we want our program to be run.
 
+For the events(alerts), I created another index called "threats":
+```
+DELETE /threats
+
+PUT /threats
+{
+  "mappings": {
+    "my_type": {
+      "properties": {
+        "date": {
+          "type": "date" 
+        }
+      }
+    }
+  }
+}
+```
+I had to set the mapping of the field "date", so it could be used as a time filter.
+
+# ElasticSpark.java
+Firstly, I set some global variables.
+```
+    static int THRESHOLD = 0;
+    static int TIMEINTERVAL = 0;
+
+    static boolean MORETHANTHRESHOLD = false;
+    static String MOSTPACKETSSENTFROM = "";
+    static long MOSTPACKETSSENTFROMNUM = 0;
+    static long NUMBEROFPACKETS = 0;
+```
+
+<br>
+In the main method, I set the time, from the last run of this program, and the threshold for the number of ICMP packets, that trigger the writing of the threat to elasticsearch. After that, I set the Spark Configuration, JavaSparkContext and create a Java Resilient Distributed Dataset. This JavaRDD is then used to perform some simple diagnostics with in the method ICMPTest.
+```
+public static void main(String[] args) {
+        TIMEINTERVAL = Integer.parseInt(args[0]);
+        THRESHOLD = Integer.parseInt(args[1]);
+
+        SparkConf conf = getConfWithQuery(TIMEINTERVAL);
+        JavaSparkContext jsc  = new JavaSparkContext(conf);
+        JavaRDD<Map<String, Object>> esRDD = JavaEsSpark.esRDD(jsc, "snortevents/syslog").values();
+        ICMPTest(esRDD);
+
+        if (MORETHANTHRESHOLD) {
+            writeResultsToES(jsc);
+        }
+    }
+```
+
+<br>
+In this method, I set the Spark Configuration to use the query I showed earlier.
+```
+ public static SparkConf getConfWithQuery(int secondsSinceLastCheck){
+        SparkConf conf = new SparkConf().setAppName("myApp").setMaster("local");
+        conf.set("es.resource", "snortevents/syslog");
+        conf.set("es.index.auto.create", "true");
+        conf.set("es.query", "{\"bool\": {\n" +
+                "      \"must\": [\n" +
+                "        {\"term\" : {\"classification\" : \" Generic ICMP event\"}},\n" +
+                "        {\"range\" : {\"@timestamp\": {\n" +
+                "          \"gt\": \"now-" + secondsSinceLastCheck + "s\"\n" +
+                "        }}}\n" +
+                "      ]\n" +
+                "    }}");
+        return conf;
+    }
+```
+The method ICMPTest gets called after the getConfWithQuery method. I set the global variables to represent the data from the Elasticsearch, like number of ICMP events, what IP did most of these ICMP events come from, ...
+
+```
+    public static void ICMPTest(JavaRDD<Map<String, Object>> esRDD){
+        if (esRDD.count() >= THRESHOLD){
+            MORETHANTHRESHOLD = true;
+            NUMBEROFPACKETS = (long) esRDD.count();
+            System.out.println("THRESHOLD: " + THRESHOLD);
+            System.out.println("TIMEINTERVAL: " + TIMEINTERVAL);
+            System.out.println("MORETHANTHRESHOLD: " + MORETHANTHRESHOLD);
+            System.out.println("NUMBEROFPACKETS: " + NUMBEROFPACKETS);
+            System.out.println("classifications: ");
+            Map<String, Integer> mostActive = new HashMap<String, Integer>();
+            for (Map<String, Object> a : esRDD.collect()){
+                String ip = a.get("source_ip") + "";
+                if (!mostActive.containsKey(ip)){
+                    mostActive.put(ip, 0);
+                } else {
+                    mostActive.put(ip, mostActive.get(ip) + 1);
+                }
+            }
+
+            String mostActiveIP = "";
+            int mostActiveNum = 0;
+            for (String key : mostActive.keySet()){
+                if (mostActive.get(key) > mostActiveNum){
+                    mostActiveIP = key;
+                    mostActiveNum = mostActive.get(key);
+                }
+            }
+            MOSTPACKETSSENTFROM = mostActiveIP;
+            MOSTPACKETSSENTFROMNUM = mostActiveNum;
+
+        }
+    }
+```
+And lastly, the threat (if there were enough ICMP events) is written back to elasticsearch. 
+```
+    private static void writeResultsToES(JavaSparkContext jsc) {
+        System.out.println("Writing events to Elasticsearch.");
+        jsc.close();
+        SparkConf confSave = new SparkConf().setAppName("myApp").setMaster("local");
+        confSave.set("es.index.auto.create", "true");
+        JavaSparkContext jscSave = new JavaSparkContext(confSave);
+
+        ImmutableMap<String, ?> writeOut = ImmutableMap.of("event", "The number of ICMP events from the last check exceeded the specified threshold of " + THRESHOLD,
+                "ICMPcount", NUMBEROFPACKETS,
+                "mostPacketsSentFrom_IP", MOSTPACKETSSENTFROM,
+                "mostPacketsSentFrom_Num", MOSTPACKETSSENTFROMNUM,
+                "date", getCurrentDate(false));
+
+        JavaRDD<Map<String, ?>> javaRDD = jscSave.parallelize(ImmutableList.of(writeOut));
+        JavaEsSpark.saveToEs(javaRDD, "threats/icmp");
+        System.out.println("DONE WITH WRITING");
+    }
+```
+
+
 
 
 
