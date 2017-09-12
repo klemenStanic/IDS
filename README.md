@@ -362,8 +362,6 @@ public static void main(String[] args) {
         }
     }
 ```
-
-<br>
 In this method, I set the Spark Configuration to use the query I showed earlier.
 ```
  public static SparkConf getConfWithQuery(int secondsSinceLastCheck){
