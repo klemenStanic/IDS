@@ -276,3 +276,44 @@ In method getOnlyICMPEvents(), we create JavaRDD, which stands for Java Resilien
 In this method, we close the JavaSpark context we created earlier, since Spark doesn't allow 2 contextes at the same time (I dont know if this is the correct way to do this, but its the only way I could make it work). We create a new context and an event Map with the event info. Next, we make an JavaRDD from our event and save it to ElasticSearch in index "threats" and type "icmp". 
 
 
+
+# ICMP tester, attempt #2
+This time, I used a faster approach to getting the data from elasticsearch. I wrote a program called ElasticSpark, which is run every n minutes, and checks the elasticsearch for ICMP events since last check. I modified the Logstash configuration, so that the Snort IDS events get saved to a ElasticSearch index called "snortevents". I also had to modify the index, by specifying, that the field classification should not be analyzed and be kept as a whole string: 
+```
+#For searching by whole string, rather it being dissected
+DELETE snortevents
+PUT /snortevents
+{
+ "mappings": {
+   "snortEvents" : {
+     "properties": {
+       "classification" : {
+         "type" : "string",
+         "index" : "not_analyzed"
+       }
+     }
+   }
+ }
+}
+```
+For querying this index, I used this next query:
+```
+GET snortevents/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term" : {"classification" : " Generic ICMP event"}},
+        {"range" : {"@timestamp": {
+          "gt": "now-5s"
+        }}}
+      ]
+    }
+  }
+}
+```
+It checks the index "snortevents" and only returns events, that have "Generic ICMP event" in field classification and were inserted into elasticsearch in the last n seconds, where n is dynamically inserted in Java, based on how frequently we want our program to be run.
+
+
+
+
