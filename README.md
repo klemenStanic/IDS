@@ -312,9 +312,9 @@ GET snortevents/_search
   }
 }
 ```
-It checks the index "snortevents" and only returns events, that have "Generic ICMP event" in field classification and were inserted into elasticsearch in the last n seconds, where n is dynamically inserted in Java, based on how frequently we want our program to be run.
+It checks the index "snortevents" and only returns events, that have "Generic ICMP event" in the field classification and were inserted into elasticsearch in the last 5 seconds. 
 
-For the events(alerts), I created another index called "threats":
+For the events(alerts), I created another index called "threats", and I set the mapping of the field "date", so it could be used as a time filter(to order our events by time):
 ```
 DELETE /threats
 
@@ -331,7 +331,6 @@ PUT /threats
   }
 }
 ```
-I had to set the mapping of the field "date", so it could be used as a time filter.
 
 # ElasticSpark.java
 Firstly, I set some global variables.
@@ -344,8 +343,6 @@ Firstly, I set some global variables.
     static long MOSTPACKETSSENTFROMNUM = 0;
     static long NUMBEROFPACKETS = 0;
 ```
-
-<br>
 In the main method, I set the time, from the last run of this program, and the threshold for the number of ICMP packets, that trigger the writing of the threat to elasticsearch. After that, I set the Spark Configuration, JavaSparkContext and create a Java Resilient Distributed Dataset. This JavaRDD is then used to perform some simple diagnostics with in the method ICMPTest.
 ```
 public static void main(String[] args) {
