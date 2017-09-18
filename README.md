@@ -432,7 +432,11 @@ And lastly, the threat (if there were enough ICMP events) is written back to ela
         System.out.println("DONE WITH WRITING");
     }
 ```
+To run this program every n minutes, I will write a bash script, but for now, I use the following command, while in the /usr/local/share/spark/spark-2.0.2/ directory, where argument m is the time in seconds since the last run of this program, and n the threshold, that triggers the event writing to the ElasticSearch:
 
+```
+sudo ./bin/spark-submit --driver-class-path=/home/klemen/elasticsearch-hadoop-5.5.1/dist/elasticsearch-spark-20_2.11-5.5.1.jar --class ElasticSpark /home/klemen/ElasticSpark.jar m n
+```
 
 
 
